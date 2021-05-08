@@ -1,0 +1,11 @@
+[package]
+name = "hangman_rewrite"
+version = "0.1.0"
+authors = ["Teodor Muzychuk <teodor.muzychuk@ucu.edu.ua>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.0"
+
