@@ -49,7 +49,7 @@ fn main() {
     let mut strikes = 10;
     let word = get_word_from_file();
     let mut hidden_word = "_".repeat(word.chars().count());
-    let prompt = "Please input your guess: ".to_string();
+    let prompt = "Please input your guess (please don't enter special chars): ".to_string();
 
     initscr();
     raw();
