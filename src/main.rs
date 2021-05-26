@@ -6,15 +6,15 @@ use std::io::BufRead;
 use std::io::BufReader;
 
 fn get_word_from_file() -> String {
-    let mut word: String = "".to_string();
     let file = File::open("words").unwrap();
-    let mut reader = BufReader::new(file);
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
 
-    for _i in 1..rand::thread_rng().gen_range(1..370102) {
-        word = "".to_string();
-        reader.read_line(&mut word).unwrap();
-    }
-    word.trim().to_string()
+    lines
+        .nth(rand::thread_rng().gen_range(0..370102))
+        .expect("No line at that location")
+        .expect("Failed to read line")
+        .to_string()
 }
 
 fn get_guess(prompt_len: i32) -> String {
@@ -34,13 +34,16 @@ fn get_guess(prompt_len: i32) -> String {
                     buffer.pop();
                 }
             }
-            _ => {
+            65..=122 => {
                 buffer.push(char::from_u32(ch as u32).expect("Invalid character!"));
                 addch(ch as u32);
             }
+            _ => {
+                continue;
+            }
         }
     }
-    buffer
+    buffer.to_lowercase()
 }
 
 fn main() {
@@ -49,7 +52,7 @@ fn main() {
     let mut strikes = 10;
     let word = get_word_from_file();
     let mut hidden_word = "_".repeat(word.chars().count());
-    let prompt = "Please input your guess (please don't enter special chars): ".to_string();
+    let prompt = "Please input your guess: ".to_string();
 
     initscr();
     raw();
