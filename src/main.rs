@@ -1,43 +1,82 @@
+use ncurses::*;
 use rand::Rng;
+use std::char;
 use std::fs::File;
-use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::io::Write;
+
+fn get_word_from_file() -> String {
+    let file = File::open("words").unwrap();
+    let reader = BufReader::new(file);
+    let mut lines = reader.lines();
+
+    lines
+        .nth(rand::thread_rng().gen_range(0..370102))
+        .expect("No line at that location")
+        .expect("Failed to read line")
+        .to_string()
+}
+
+fn get_guess(prompt_len: i32) -> String {
+    let mut buffer = "".to_string();
+
+    loop {
+        let mut y: i32 = 0;
+        let mut x: i32 = 0;
+        let ch = getch();
+        getyx(stdscr(), &mut y, &mut x);
+        match ch {
+            10 => break,
+            127 => {
+                if x > prompt_len {
+                    mvaddstr(y, x - 1, " ");
+                    mv(y, x - 1);
+                    buffer.pop();
+                }
+            }
+            65..=122 => {
+                buffer.push(char::from_u32(ch as u32).expect("Invalid character!"));
+                addch(ch as u32);
+            }
+            _ => {
+                continue;
+            }
+        }
+    }
+    buffer.to_lowercase()
+}
 
 fn main() {
-    let mut word: String = "".to_string();
     let mut guessed_chars = Vec::new();
     let mut all_guesses = Vec::new();
     let mut strikes = 10;
+    let word = get_word_from_file();
+    let mut hidden_word = "_".repeat(word.chars().count());
+    let prompt = "Please input your guess: ".to_string();
 
-    let file = File::open("words").unwrap();
-    let mut reader = BufReader::new(file);
-    for _i in 1..rand::thread_rng().gen_range(1..370102) {
-        word = "".to_string();
-        reader.read_line(&mut word).unwrap();
-    }
-    word = word.trim().to_string();
-    let hidden_word = "_".repeat(word.chars().count());
-
-    println!("{}", hidden_word);
+    initscr();
+    raw();
+    keypad(stdscr(), true);
+    noecho();
 
     loop {
-        print!("Please input your guess: ");
+        clear();
+        mvaddstr(0, 0, &hidden_word);
+        mvaddstr(1, 0, format!("Strikes left: {}", &strikes).as_ref());
+        mvaddstr(
+            2,
+            0,
+            format!("Characters guessed: {:?}", all_guesses).as_ref(),
+        );
+        mvaddstr(3, 0, &prompt);
 
-
-        io::stdout().flush().expect("Error flushing stdout.");
-
-        let mut guess = String::new();
-
-        io::stdin()
-            .read_line(&mut guess)
-            .expect("Error reading line.");
+        let guess = get_guess(prompt.chars().count() as i32);
 
         let guess = guess.trim().to_string();
 
-        if guess==word {
-            println!("You won!");
+        if guess == word {
+            clear();
+            addstr("You won!");
             break;
         }
 
@@ -45,40 +84,36 @@ fn main() {
             all_guesses.push(guess.clone());
         }
 
-        let mut hidden_word = String::new();
+        hidden_word = "".to_string();
 
-        match word.contains(&guess) && guess.chars().count() == 1 {
-            true => {
-                if !guessed_chars.contains(&guess) {
-                    guessed_chars.push(guess);
-                }
+        if word.contains(&guess) && guess.chars().count() == 1 {
+            if !guessed_chars.contains(&guess) {
+                guessed_chars.push(guess);
             }
-            false => {
-                strikes -= 1;
-                println!("You get a strike! Strikes left: {}", &strikes);
-            }
+        } else {
+            strikes -= 1;
         }
 
         for ch in word.chars() {
-            match guessed_chars.contains(&ch.to_string()) {
-                true => {
-                    hidden_word.push(ch);
-                }
-                false => hidden_word.push('_'),
+            if guessed_chars.contains(&ch.to_string()) {
+                hidden_word.push(ch);
+            } else {
+                hidden_word.push('_');
             }
         }
 
-        println!("Characters guessed: {:?}", all_guesses);
-        println!("{}", hidden_word);
-
         if hidden_word == word {
-            println!("You won!");
+            clear();
+            addstr(format!("You won! The word was {}", word).as_ref());
             break;
         }
 
         if strikes == 0 {
-            println!("You lost! The word was {}", word);
+            clear();
+            addstr(format!("You lost! The word was {}", word).as_ref());
             break;
         }
     }
+    getch();
+    endwin();
 }
